@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useEvents } from './hooks';
 import { formatInTz } from '../../utils/time';
 
-const LIMIT = 100;
+const LIMIT = 25;
 
 interface EventsLogProps {
   from: string;
@@ -63,7 +63,7 @@ export default function EventsLog({ from, to, discordUserId }: EventsLogProps) {
         <table className="w-full">
           <thead className="border-b border-border">
             <tr>
-              {['ID', 'Agente', 'Acción', 'Fecha y hora', 'Google Sheets'].map((h) => (
+              {['Agente', 'Acción', 'Fecha y hora', 'Google Sheets'].map((h) => (
                 <th
                   key={h}
                   className="px-4 py-3 text-left text-xs font-medium text-[#94a3b8] uppercase tracking-wide"
@@ -76,8 +76,7 @@ export default function EventsLog({ from, to, discordUserId }: EventsLogProps) {
           <tbody>
             {events.map((ev) => (
               <tr key={ev.id} className="border-b border-border hover:bg-[#1f2335] transition-colors">
-                <td className="px-4 py-3 text-xs text-[#94a3b8] font-mono">{ev.id}</td>
-                <td className="px-4 py-3 text-sm text-white">{ev.displayName}</td>
+<td className="px-4 py-3 text-sm text-white">{ev.displayName}</td>
                 <td className="px-4 py-3">
                   <span
                     className={`px-2 py-0.5 rounded-full text-xs font-medium ${
