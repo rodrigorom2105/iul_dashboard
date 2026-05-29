@@ -1,13 +1,16 @@
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
+import { LiveCountProvider } from './LiveCountContext';
 
 export default function AppShell() {
   return (
-    <div className="flex min-h-screen bg-app">
-      <Sidebar />
-      <main className="flex-1 min-w-0 overflow-y-auto p-6">
-        <Outlet />
-      </main>
-    </div>
+    <LiveCountProvider>
+      <div className="flex min-h-screen">
+        <Sidebar />
+        <div className="flex-1 min-w-0 flex flex-col">
+          <Outlet />
+        </div>
+      </div>
+    </LiveCountProvider>
   );
 }

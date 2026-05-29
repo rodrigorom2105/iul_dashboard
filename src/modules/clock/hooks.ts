@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { fetchSummary, fetchEvents, type FetchEventsParams } from './api';
+import { getRangePreset } from '../../utils/time';
 
 export function useSummary(from: string, to: string) {
   return useQuery({
@@ -8,6 +9,19 @@ export function useSummary(from: string, to: string) {
     refetchInterval: 30_000,
     staleTime: 25_000,
     enabled: Boolean(from && to),
+  });
+}
+
+export function useLiveAgents() {
+  return useQuery({
+    queryKey: ['summary', 'live'],
+    queryFn: () => {
+      const { from, to } = getRangePreset('today');
+      return fetchSummary({ from, to });
+    },
+    refetchInterval: 30_000,
+    staleTime: 25_000,
+    select: (data) => data.agents,
   });
 }
 
