@@ -1,113 +1,176 @@
-import { useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { useSummary } from './hooks';
-import { getRangePreset } from '../../utils/time';
+import { useEffect, useMemo } from 'react';
+import { useSearchParams, Navigate } from 'react-router-dom';
+import { useSummary, useLiveAgents } from './hooks';
+import { getRangePreset, fmtDate } from '../../utils/time';
+import { useLiveCount } from '../../layout/LiveCountContext';
 import type { RangePresetKey } from './types';
-import FilterBar from './FilterBar';
-import SummaryCards from './SummaryCards';
-import AgentTable from './AgentTable';
-import HoursChart from './HoursChart';
-import EventsLog from './EventsLog';
-
-const TABS = [
-  { key: 'chart', label: 'Gráfica' },
-  { key: 'table', label: 'Tabla' },
-  { key: 'events', label: 'Eventos' },
-] as const;
-
-type TabKey = (typeof TABS)[number]['key'];
+import TopBar from './TopBar';
+import LiveNow from './LiveNow';
+import PeriodMetrics from './PeriodMetrics';
+import Ranking from './Ranking';
+import EventsFeed from './EventsFeed';
+import InOutChart from './InOutChart';
 
 export default function ClockPage() {
-  const [searchParams, setSearchParams] = useSearchParams();
-
+  const [searchParams] = useSearchParams();
   const preset = (searchParams.get('preset') ?? 'today') as RangePresetKey;
   const hasRange = searchParams.has('from') && searchParams.has('to');
-  const activeTab = (searchParams.get('tab') ?? 'chart') as TabKey;
 
-  useEffect(() => {
-    if (!hasRange && preset !== 'custom') {
-      const range = getRangePreset(preset as Exclude<RangePresetKey, 'custom'>);
-      setSearchParams({ preset, from: range.from, to: range.to, tab: activeTab }, { replace: true });
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!hasRange && preset !== 'custom') {
+    const range = getRangePreset(preset as Exclude<RangePresetKey, 'custom'>);
+    const params = new URLSearchParams({ preset, from: range.from, to: range.to });
+    return <Navigate to={`?${params}`} replace />;
+  }
+
+  return <ClockPageContent />;
+}
+
+function ClockPageContent() {
+  const [searchParams] = useSearchParams();
+  const { setLiveCount } = useLiveCount();
 
   const from = searchParams.get('from') ?? '';
   const to = searchParams.get('to') ?? '';
   const agentId = searchParams.get('agent') ?? undefined;
 
-  const { data, isLoading, isError, isFetching, refetch } = useSummary(from, to);
+  const { data, isLoading, isError, refetch } = useSummary(from, to);
+  const { data: liveAgents = [] } = useLiveAgents();
 
-  const agents = data?.agents ?? [];
+  const allAgents = data?.agents ?? [];
   const filteredAgents = agentId
-    ? agents.filter((a) => a.discordUserId === agentId)
-    : agents;
+    ? allAgents.filter((a) => a.discordUserId === agentId)
+    : allAgents;
 
-  function setTab(tab: TabKey) {
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev);
-      next.set('tab', tab);
-      return next;
-    });
-  }
+  const totalMaxMinutes = useMemo(
+    () => allAgents.reduce((m, a) => Math.max(m, a.totalMinutes), 0),
+    [allAgents]
+  );
+
+  const liveCount = liveAgents.filter((a) => a.currentlyClocked).length;
+  useEffect(() => {
+    setLiveCount(liveCount);
+  }, [liveCount, setLiveCount]);
+
+  const rangeLabel = useMemo(() => {
+    if (!from || !to) return '';
+    const opts: Intl.DateTimeFormatOptions = { day: '2-digit', month: 'short' };
+    return `${new Date(from).toLocaleDateString('es-MX', opts)} – ${new Date(to).toLocaleDateString('es-MX', opts)}`;
+  }, [from, to]);
 
   return (
-    <div className="max-w-7xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-semibold text-white">Clock-In / Clock-Out</h1>
-        {isFetching && !isLoading && (
-          <div className="w-4 h-4 border-2 border-blue-accent border-t-transparent rounded-full animate-spin" />
-        )}
-      </div>
-
-      <FilterBar agents={agents} />
-
-      <SummaryCards agents={filteredAgents} loading={isLoading} />
-
-      <div className="flex gap-1 mb-4 border-b border-border">
-        {TABS.map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => setTab(tab.key)}
-            className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
-              activeTab === tab.key
-                ? 'border-blue-accent text-white'
-                : 'border-transparent text-[#94a3b8] hover:text-white'
-            }`}
+    <>
+      <TopBar agents={allAgents} />
+      <main
+        style={{
+          padding: '24px 28px 56px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 24,
+          maxWidth: 1480,
+          width: '100%',
+          margin: '0 auto',
+        }}
+      >
+        {isError ? (
+          <div
+            style={{
+              background: 'var(--bg-elev)',
+              border: '1px solid var(--border)',
+              borderRadius: 14,
+              padding: 32,
+              textAlign: 'center',
+            }}
           >
-            {tab.label}
-          </button>
+            <p style={{ color: 'var(--text-3)', marginBottom: 12 }}>Error al cargar los datos.</p>
+            <button
+              onClick={() => void refetch()}
+              style={{
+                padding: '8px 16px',
+                background: 'var(--accent)',
+                color: '#0a0c10',
+                border: 'none',
+                borderRadius: 8,
+                fontWeight: 600,
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                fontSize: 13,
+              }}
+            >
+              Reintentar
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="fade-in">
+              <LiveNow />
+            </div>
+
+            <div className="fade-in" style={{ animationDelay: '60ms' }}>
+              {isLoading ? (
+                <PeriodMetricsSkeleton />
+              ) : (
+                <PeriodMetrics agents={filteredAgents} rangeLabel={rangeLabel} />
+              )}
+            </div>
+
+            <div
+              className="fade-in"
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'minmax(0, 1.55fr) minmax(320px, 1fr)',
+                gap: 20,
+                animationDelay: '120ms',
+              }}
+            >
+              {isLoading ? (
+                <>
+                  <div className="skeleton" style={{ height: 400, borderRadius: 14 }} />
+                  <div className="skeleton" style={{ height: 400, borderRadius: 14 }} />
+                </>
+              ) : (
+                <>
+                  <Ranking agents={filteredAgents} totalMaxMinutes={totalMaxMinutes} />
+                  <EventsFeed key={`${from}|${to}|${agentId ?? ''}`} from={from} to={to} discordUserId={agentId} />
+                </>
+              )}
+            </div>
+
+            <div className="fade-in" style={{ animationDelay: '180ms' }}>
+              {!isLoading && <InOutChart agents={allAgents} />}
+            </div>
+          </>
+        )}
+
+        <footer style={{ paddingTop: 12, color: 'var(--text-3)', fontSize: 11, textAlign: 'center' }}>
+          IUL Dashboard · {fmtDate(new Date())}
+        </footer>
+      </main>
+    </>
+  );
+}
+
+function PeriodMetricsSkeleton() {
+  return (
+    <div>
+      <div style={{ height: 16, marginBottom: 12, width: 140 }} className="skeleton" />
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(4, 1fr)',
+          gap: 1,
+          background: 'var(--border)',
+          border: '1px solid var(--border)',
+          borderRadius: 14,
+          overflow: 'hidden',
+        }}
+      >
+        {[...Array(4)].map((_, i) => (
+          <div key={i} style={{ background: 'var(--bg-elev)', padding: '16px 20px' }}>
+            <div className="skeleton" style={{ height: 10, width: 80, marginBottom: 10 }} />
+            <div className="skeleton" style={{ height: 32, width: 64 }} />
+          </div>
         ))}
       </div>
-
-      {isError ? (
-        <div className="bg-card border border-border rounded-lg p-8 text-center mb-6">
-          <p className="text-[#94a3b8] mb-3">Error al cargar los datos.</p>
-          <button
-            onClick={() => void refetch()}
-            className="px-4 py-2 bg-blue-accent hover:bg-blue-500 text-white text-sm rounded-md transition-colors"
-          >
-            Reintentar
-          </button>
-        </div>
-      ) : isLoading ? (
-        <div className="space-y-3 mb-6">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-14 bg-card border border-border rounded-lg animate-pulse" />
-          ))}
-        </div>
-      ) : (
-        <>
-          {activeTab === 'chart' && <HoursChart agents={filteredAgents} />}
-          {activeTab === 'table' && (
-            <div className="mb-6">
-              <AgentTable agents={filteredAgents} />
-            </div>
-          )}
-          {activeTab === 'events' && from && to && (
-            <EventsLog from={from} to={to} discordUserId={agentId} />
-          )}
-        </>
-      )}
     </div>
   );
 }
