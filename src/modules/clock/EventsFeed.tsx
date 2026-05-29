@@ -12,9 +12,10 @@ interface EventsFeedProps {
   from: string;
   to: string;
   discordUserId?: string;
+  liveEnd?: boolean;
 }
 
-export default function EventsFeed({ from, to, discordUserId }: EventsFeedProps) {
+export default function EventsFeed({ from, to, discordUserId, liveEnd }: EventsFeedProps) {
   const [offset, setOffset] = useState(0);
 
   const { data, isLoading } = useEvents({
@@ -23,7 +24,7 @@ export default function EventsFeed({ from, to, discordUserId }: EventsFeedProps)
     discordUserId,
     limit: PER_PAGE,
     offset,
-  });
+  }, liveEnd);
 
   const total = data?.total ?? 0;
   const pages = Math.max(1, Math.ceil(total / PER_PAGE));

@@ -32,8 +32,10 @@ function ClockPageContent() {
   const from = searchParams.get('from') ?? '';
   const to = searchParams.get('to') ?? '';
   const agentId = searchParams.get('agent') ?? undefined;
+  const preset = (searchParams.get('preset') ?? 'today') as RangePresetKey;
+  const liveEnd = ['today', 'this_week', 'this_month'].includes(preset);
 
-  const { data, isLoading, isError, refetch } = useSummary(from, to);
+  const { data, isLoading, isError, refetch } = useSummary(from, to, liveEnd);
   const { data: liveAgents = [] } = useLiveAgents();
 
   const allAgents = data?.agents ?? [];
@@ -130,7 +132,7 @@ function ClockPageContent() {
               ) : (
                 <>
                   <Ranking agents={filteredAgents} totalMaxMinutes={totalMaxMinutes} />
-                  <EventsFeed key={`${from}|${to}|${agentId ?? ''}`} from={from} to={to} discordUserId={agentId} />
+                  <EventsFeed key={`${from}|${to}|${agentId ?? ''}`} from={from} to={to} discordUserId={agentId} liveEnd={liveEnd} />
                 </>
               )}
             </div>
