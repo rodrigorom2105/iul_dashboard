@@ -5,6 +5,7 @@ import ProtectedRoute from './auth/ProtectedRoute';
 import AppShell from './layout/AppShell';
 import LoginPage from './pages/LoginPage';
 import ClockPage from './modules/clock/ClockPage';
+import SalesPage from './modules/sales/SalesPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -23,6 +24,7 @@ export default function App() {
               <Route element={<AppShell />}>
                 <Route index element={<Navigate to="/clock" replace />} />
                 <Route path="/clock" element={<ClockPage />} />
+                <Route path="/sales" element={<SalesPage />} />
               </Route>
             </Route>
           </Routes>

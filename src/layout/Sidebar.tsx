@@ -10,6 +10,11 @@ function clockTodayPath(): string {
   return `/clock?preset=today&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
 }
 
+function salesThisMonthPath(): string {
+  const { from, to } = getRangePreset("this_month");
+  return `/sales?preset=this_month&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
+}
+
 interface NavItemProps {
   icon: React.ReactNode;
   label: string;
@@ -93,6 +98,7 @@ export default function Sidebar() {
   const { liveCount } = useLiveCount();
 
   const isClockActive = location.pathname.startsWith("/clock");
+  const isSalesActive = location.pathname.startsWith("/sales");
 
   return (
     <aside
@@ -155,6 +161,12 @@ export default function Sidebar() {
           active={isClockActive}
           count={liveCount > 0 ? liveCount : undefined}
           onClick={() => navigate(clockTodayPath())}
+        />
+        <NavItem
+          icon={<CheckCircle size={15} />}
+          label="Ventas"
+          active={isSalesActive}
+          onClick={() => navigate(salesThisMonthPath())}
         />
         <NavItem
           icon={<Calendar size={15} />}
